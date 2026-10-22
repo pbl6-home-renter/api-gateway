@@ -21,6 +21,7 @@ export const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
   { prefix: `${API_PREFIX}/users`, service: GatewayService.Identity },
   { prefix: `${API_PREFIX}/me`, service: GatewayService.Identity },
   { prefix: `${API_PREFIX}/.well-known`, service: GatewayService.Identity },
+  { prefix: `${API_PREFIX}/identity`, service: GatewayService.Identity },
   { prefix: `${API_PREFIX}/payments`, service: GatewayService.Payment },
   { prefix: `${API_PREFIX}/chat`, service: GatewayService.Community },
   { prefix: `${API_PREFIX}/buildings`, service: GatewayService.Tenancy },
@@ -41,4 +42,6 @@ export const PUBLIC_PATHS: readonly string[] = [
   `${API_PREFIX}/auth/password-reset-requests`,
   `${API_PREFIX}/auth/password-resets`,
   `${API_PREFIX}/.well-known/jwks.json`,
+  `${API_PREFIX}/identity/health`,
+  `${API_PREFIX}/identity/swagger`,
 ];

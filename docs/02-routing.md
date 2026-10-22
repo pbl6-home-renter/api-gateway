@@ -92,6 +92,30 @@ Lợi ích:
 > Thêm prefix tên service chỉ sinh ra một bước rewrite và làm path trong
 > Swagger khác với path client gọi.
 
+## Health và Swagger của từng service
+
+`/health` thuộc về gateway (gateway tự trả lời, không chuyển tiếp). Health và
+Swagger của service backend nằm dưới một prefix riêng theo tên service, để
+mỗi path vẫn thuộc đúng một service:
+
+| Path | Ý nghĩa |
+|---|---|
+| `/api/v1/<service>/health` | Health check của service (dự kiến do gateway kiểm tra, chưa làm) |
+| `/api/v1/<service>/swagger` | Swagger UI; JSON ở `/api/v1/<service>/swagger/json` (dùng cho Apidog) |
+
+Trong service:
+
+```ts
+@Controller('identity/health')
+SwaggerModule.setup('identity/swagger', app, document, {
+  useGlobalPrefix: true,
+  jsonDocumentUrl: 'identity/swagger/json',
+});
+```
+
+Trong gateway: thêm route `${API_PREFIX}/<service>` và đưa hai path
+`/health`, `/swagger` của service vào `PUBLIC_PATHS`.
+
 ## Thêm route mới
 
 Giả sử Tenancy thêm `MaintenanceRequestsController`:
