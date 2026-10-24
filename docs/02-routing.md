@@ -19,9 +19,9 @@ Một prefix "sở hữu" chính nó và mọi thứ bên dưới: `/api/v1/room
 
 | File | Vai trò |
 |---|---|
-| [constants/route-paths.constants.ts](../src/constants/route-paths.constants.ts) | `API_PREFIX`, `ROUTE_DEFINITIONS` (prefix → service), `PUBLIC_PATHS` |
+| [constants/route-paths.constants.ts](../src/constants/route-paths.constants.ts) | `API_PREFIX`, `ROUTE_DEFINITIONS` (prefix → service, sinh từ `ROUTE_PREFIXES`), `PUBLIC_RULES` |
 | [constants/gateway-service.enum.ts](../src/constants/gateway-service.enum.ts) | Enum `GatewayService` và tên biến env chứa URL của từng service |
-| [routing/route-table.service.ts](../src/routing/route-table.service.ts) | Ghép định nghĩa route với URL đã cấu hình; `resolve()`, `isPublicPath()` |
+| [routing/route-table.service.ts](../src/routing/route-table.service.ts) | Ghép định nghĩa route với URL đã cấu hình; `resolve()`, `isPublic(method, path)` |
 | [routing/route-resolver.middleware.ts](../src/routing/route-resolver.middleware.ts) | Gắn `request.gatewayRoute` hoặc trả `404` |
 
 Bảng route được tách làm hai phần có chủ đích:
@@ -113,20 +113,28 @@ SwaggerModule.setup('identity/swagger', app, document, {
 });
 ```
 
-Trong gateway: thêm route `${API_PREFIX}/<service>` và đưa hai path
-`/health`, `/swagger` của service vào `PUBLIC_PATHS`.
+Trong gateway: khai báo tên đoạn path của service trong `SERVICE_PATHS`; route
+`${API_PREFIX}/<service>` và hai rule public `GET .../health`, `GET .../swagger/**`
+được sinh tự động.
+
+### Path `/me/*` thuộc nhiều service
+
+`/api/v1/me` thuộc Identity, nhưng `/me/buildings`, `/me/contracts`,
+`/me/payments`, `/me/issues`… thuộc service sở hữu dữ liệu đó. Mỗi path con này
+được khai báo riêng trong `ROUTE_PREFIXES` và thắng `/me` nhờ quy tắc prefix dài
+nhất. Khi spec thêm một `/me/<resource>` mới, phải thêm nó vào service đúng,
+nếu không request sẽ rơi vào Identity và trả `404`.
 
 ## Thêm route mới
 
 Giả sử Tenancy thêm `MaintenanceRequestsController`:
 
 1. **Trong service:** `@Controller('maintenance-requests')`, nằm dưới global prefix `api/v1`.
-2. **Trong gateway**, thêm vào `ROUTE_DEFINITIONS`:
-   ```ts
-   { prefix: `${API_PREFIX}/maintenance-requests`, service: GatewayService.Tenancy },
-   ```
-3. **Nếu có endpoint cần gọi được khi chưa đăng nhập**, thêm path đầy đủ của
-   nó vào `PUBLIC_PATHS` (xem [Xác thực](03-authentication.md)).
+2. **Trong gateway**, thêm `'/maintenance-requests'` vào danh sách của
+   `GatewayService.Tenancy` trong `ROUTE_PREFIXES`.
+3. **Nếu có endpoint cần gọi được khi chưa đăng nhập**, thêm một rule
+   `{ method, path }` vào `PUBLIC_RULES` (xem [Xác thực](03-authentication.md)),
+   **và** đánh dấu `@Public()` trong service.
 4. Deploy service trước, gateway sau. Làm ngược lại thì path mới sẽ trả
    `503`/`504` trong lúc chờ.
 
@@ -143,13 +151,18 @@ Quy tắc đặt tên: danh từ số nhiều, kebab-case (`buildings`, `mainten
    ```
    `SERVICE_URL_ENV_VAR` có kiểu `Record<GatewayService, string>`, nên compiler
    bắt buộc bạn khai báo biến env. Quên là lỗi build, không phải lỗi lúc chạy.
-2. Thêm các route của nó vào `ROUTE_DEFINITIONS`.
+2. Thêm các prefix của nó vào `ROUTE_PREFIXES` và tên đoạn path vào `SERVICE_PATHS`.
 3. Thêm `NOTIFICATION_SERVICE_URL=http://notification:3005` vào `.env.example`
    và `infra/env/api-gateway.env.example`, rồi vào file env thật trên EC2.
 4. Thêm service vào `infra/docker-compose.prod.yml` bằng `expose`, **không** dùng `ports`.
 
 ## Gọi giữa các service
 
-Các service gọi nhau **trực tiếp** trong mạng Docker
-(`http://identity:3001/api/v1/...`) hoặc qua RabbitMQ, không bao giờ đi vòng qua
-gateway. Gateway đòi token của người dùng cuối, còn lời gọi nội bộ thì không có token đó.
+Các service gọi nhau **trực tiếp** trong private network hoặc qua RabbitMQ, không
+bao giờ đi vòng qua gateway:
+
+- Nếu đang xử lý request của một user, chuyển tiếp nguyên `Authorization` của
+  user đó: service nhận verify như mọi request khác.
+- Nếu là lời gọi hệ thống (không có user), gọi endpoint `internal/...` (nằm
+  ngoài prefix `api/v1`, gateway trả `404`) kèm header `X-Service-Token`. Service
+  đánh dấu endpoint bằng `@InternalOnly()`.

@@ -12,13 +12,15 @@ Mọi cấu hình đến từ biến môi trường, được
 | `TENANCY_SERVICE_URL` | — | Ví dụ `http://tenancy:3002` |
 | `PAYMENT_SERVICE_URL` | — | Ví dụ `http://payment:3003` |
 | `COMMUNITY_SERVICE_URL` | — | Ví dụ `http://community:3004` |
-| `JWKS_URL` | — | Ví dụ `http://identity:3001/api/v1/.well-known/jwks.json`. Không đặt → route cần bảo vệ trả 503 |
+| `JWKS_URL` | — | Ví dụ `http://identity:3001/api/v1/.well-known/jwks.json`. Không đặt → request có token tới route cần bảo vệ trả `503 AUTH_UNAVAILABLE` |
 | `JWT_ISSUER` | `rentify-identity` | Phải bằng `JWT_ISSUER` của Identity |
 | `JWT_AUDIENCE` | `rentify-api` | Phải bằng `JWT_AUDIENCE` của Identity |
 | `PROXY_TIMEOUT_MS` | `10000` | Timeout khi gọi upstream |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Độ dài cửa sổ rate limit |
 | `RATE_LIMIT_MAX` | `120` | Số request mỗi cửa sổ, nhóm chung |
-| `AUTH_RATE_LIMIT_MAX` | `10` | Số request mỗi cửa sổ, path `/auth/` |
+| `AUTH_RATE_LIMIT_MAX` | `10` | Số request mỗi cửa sổ, path `/api/v1/auth/` (trừ refresh) |
+| `REFRESH_RATE_LIMIT_MAX` | `60` | Số request mỗi cửa sổ, `/api/v1/auth/refresh` |
+| `CORS_ORIGINS` | `http://localhost:5173` | Danh sách origin trình duyệt được phép, ngăn cách bằng dấu phẩy (vd. `http://<EC2_IP>:5173`) |
 
 URL service dùng **tên DNS của Docker** (`identity`, `tenancy`), tức tên
 service trong Compose, chứ không dùng IP. Docker tự phân giải chúng trong mạng chung.

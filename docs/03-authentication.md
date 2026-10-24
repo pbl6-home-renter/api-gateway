@@ -108,64 +108,78 @@ token đều bị `401`.
 ## Path public
 
 Một số endpoint phải gọi được khi chưa có token (đang login thì làm gì đã có
-token). Chúng được liệt kê trong `PUBLIC_PATHS` ở
-[route-paths.constants.ts](../src/constants/route-paths.constants.ts):
+token; khách xem phòng). Chúng được liệt kê trong `PUBLIC_RULES` ở
+[route-paths.constants.ts](../src/constants/route-paths.constants.ts), mỗi rule
+gồm **method** và **path**:
 
 ```ts
-HEALTH_PATH,
-`${API_PREFIX}/auth/register`,
-`${API_PREFIX}/auth/login`,
-`${API_PREFIX}/auth/password-reset-requests`,
-`${API_PREFIX}/auth/password-resets`,
-`${API_PREFIX}/.well-known/jwks.json`,
+{ method: 'POST', path: `${API_PREFIX}/auth/login` },
+{ method: 'POST', path: `${API_PREFIX}/auth/refresh` },
+{ method: 'GET',  path: `${API_PREFIX}/rooms` },
+{ method: 'GET',  path: `${API_PREFIX}/rooms/*` },          // * = đúng một đoạn path
+{ method: 'POST', path: `${API_PREFIX}/payments/webhooks/*` },
+{ method: 'GET',  path: `${API_PREFIX}/identity/swagger/**` }, // ** = phần còn lại
 ```
 
-So khớp theo từng đoạn path giống routing: `/api/v1/auth/login` cũng bao luôn
-`/api/v1/auth/login/bat-ky-gi`.
+So khớp **chính xác** theo method và từng đoạn path: `GET /rooms/42` là public,
+nhưng `POST /rooms`, `PATCH /rooms/42` hay `POST /rooms/42/mark-ready` vẫn cần token.
 
 Danh sách này là **allow-list**: mọi thứ không có trong danh sách đều cần
-token. Đây là mặc định an toàn. Quên khai báo một endpoint chỉ khiến nó *quá
-chặt* (lỗi `401` thấy ngay), không bao giờ khiến nó *bị hở*.
+token. Quên khai báo một endpoint chỉ khiến nó *quá chặt* (lỗi `401` thấy ngay),
+không bao giờ khiến nó *bị hở*. Path public vẫn phải khớp một route trong
+`ROUTE_DEFINITIONS`, nếu không sẽ trả `404`.
 
-Path public vẫn phải khớp một route trong `ROUTE_DEFINITIONS`, nếu không sẽ trả `404`.
+**Optional auth:** trên path public, nếu client có gửi Bearer token hợp lệ thì
+gateway vẫn verify và chuyển tiếp như bình thường (vd. khách đã đăng nhập xem
+phòng để biết phòng nào đã lưu yêu thích). Token sai trên path public bị bỏ qua,
+service tự quyết định.
 
-## Header định danh tin cậy
+## Hai lớp xác thực: gateway và service
 
-Sau khi verify, bước proxy gửi kèm thông tin người gọi:
+**Mọi service tự verify lại access token** (header `Authorization` được gateway
+chuyển tiếp nguyên vẹn), bằng JWKS cache cục bộ giống hệt gateway. Service
+**không** dùng header `x-user-*` để phân quyền.
 
-| Header | Lấy từ |
+Vì sao? Mô hình "service tin header của gateway" chỉ an toàn khi *chỉ duy nhất
+gateway gọi được service*. Khi hệ thống chạy trên nhiều server trong cùng
+private network, port của service phải mở cho cả mạng đó: bất kỳ máy/container
+nào trong mạng (bị chiếm quyền, script debug, service khác dính lỗi SSRF) gửi
+`x-user-id: <id-admin>` là thành admin. Header chỉ là **lời khai**; JWT là
+**bằng chứng có chữ ký** mà chỉ Identity tạo được. Verify cục bộ gần như không
+tốn gì (không có network hop), nên không có lý do bỏ qua.
+
+Vậy gateway xác thực để làm gì? Hai lớp làm hai việc khác nhau:
+
+| Gateway (lọc ở cửa) | Service (quyết định cuối) |
 |---|---|
-| `x-user-id` | claim `sub` |
-| `x-user-role` | claim `role` |
+| Chặn sớm request không token, service không tốn CPU/DB cho chúng | Token có hợp lệ không |
+| Một chỗ định nghĩa public/protected, một mã `401` thống nhất để client refresh token | Phân quyền: `@Roles`, `status=locked`, ownership dữ liệu |
+| Rate limit, log có user id, correlation id | Không phụ thuộc topology mạng |
+| Không bao giờ route `internal/*` ra Internet | |
 
-Service backend đọc các header này **thay vì tự verify JWT lần nữa**. Điều đó
-chỉ an toàn nhờ hai bảo đảm:
+Chi tiết guard phía service: xem mục *Xác thực* trong README của `boilerplate`.
 
-1. **Gateway xoá bản do client tự gửi.** Ai gửi `x-user-id: nguoi-khac` sẽ bị
-   gỡ header đó trước khi chuyển tiếp (`SPOOFABLE_HEADERS` trong
-   [headers.constants.ts](../src/constants/headers.constants.ts)). Trên path
-   public, nơi không có token để verify, backend không nhận được `x-user-id` nào cả.
-2. **Backend chỉ truy cập được qua gateway.** Nếu port của service bị mở ra
-   Internet, kẻ tấn công có thể gọi thẳng vào với header giả. Chỉ dùng `expose`.
+### Header gateway thêm vào
 
-### Service backend nên làm gì
+| Header | Mục đích |
+|---|---|
+| `Authorization` | Chuyển tiếp nguyên vẹn, service verify lại |
+| `x-user-id` | Claim `sub`, **chỉ để log/trace** |
+| `x-correlation-id` | Truy vết request qua các service |
 
-```ts
-// một param decorator trong service
-export const CurrentUser = createParamDecorator((_, ctx: ExecutionContext) => {
-  const request = ctx.switchToHttp().getRequest<Request>();
-  return { id: request.header('x-user-id'), role: request.header('x-user-role') };
-});
-```
+Mọi header `x-user-*` và `x-service-token` do client tự gửi đều bị xoá trước
+khi chuyển tiếp (`SPOOFABLE_HEADER_PREFIXES` trong
+[headers.constants.ts](../src/constants/headers.constants.ts)).
 
-Sau đó thêm guard để kiểm tra role (`@Roles('landlord')`), và kiểm tra quyền
-sở hữu dữ liệu trong tầng service, nơi có dữ liệu.
+Claim bắt buộc trong access token: `sub`, `role`, `status`. Thiếu một trong ba → `401`.
 
 ## Các trường hợp lỗi
 
 | Tình huống | Response |
 |---|---|
-| Không có header `Authorization`, hoặc không theo dạng `Bearer ...` | `401 UNAUTHORIZED` |
-| Token hết hạn, bị sửa, sai `iss`/`aud`, `kid` lạ | `401 UNAUTHORIZED` |
-| Chưa đặt `JWKS_URL` | `503 JWKS_NOT_CONFIGURED` cho mọi path cần bảo vệ |
-| Identity sập đúng lúc gateway cần tải key | `401 UNAUTHORIZED` (verify thất bại); path public vẫn chạy |
+| Path cần token mà không có header `Authorization`, hoặc không theo dạng `Bearer ...` | `401 UNAUTHORIZED` |
+| Token hết hạn, bị sửa, sai `iss`/`aud`, `kid` lạ, thiếu claim | `401 UNAUTHORIZED` |
+| Không tải được JWKS (Identity sập, chưa đặt `JWKS_URL`) | `503 AUTH_UNAVAILABLE`; path public vẫn chạy |
+
+`503 AUTH_UNAVAILABLE` cố ý **khác** `401`: token của client có thể vẫn còn tốt,
+nên client không được logout hay refresh khi gặp mã này, chỉ cần thử lại sau.
