@@ -12,6 +12,8 @@ export class GatewayConfigService {
   readonly rateLimitWindowMs: number;
   readonly defaultRateLimit: number;
   readonly authRateLimit: number;
+  readonly refreshRateLimit: number;
+  readonly corsOrigins: readonly string[];
 
   private readonly serviceUrls: Readonly<Record<GatewayService, string | undefined>>;
 
@@ -24,6 +26,11 @@ export class GatewayConfigService {
     this.rateLimitWindowMs = this.readInt('RATE_LIMIT_WINDOW_MS', 60000);
     this.defaultRateLimit = this.readInt('RATE_LIMIT_MAX', 120);
     this.authRateLimit = this.readInt('AUTH_RATE_LIMIT_MAX', 10);
+    this.refreshRateLimit = this.readInt('REFRESH_RATE_LIMIT_MAX', 60);
+    this.corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
 
     this.serviceUrls = Object.fromEntries(
       Object.entries(SERVICE_URL_ENV_VAR).map(([service, envVar]) => [service, process.env[envVar]]),

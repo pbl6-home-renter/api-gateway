@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 
+export interface CorrelatedRequest extends Request {
+  correlationId: string;
+}
+
 /** Reuses a caller-supplied `x-correlation-id` if present and sane, otherwise mints one. */
 export class CorrelationId {
   private static readonly MAX_INCOMING_LENGTH = 128;

@@ -2,6 +2,12 @@ import { Injectable, type NestMiddleware, type OnModuleDestroy } from '@nestjs/c
 import type { Request, Response, NextFunction } from 'express';
 import { GatewayConfigService } from '../config/gateway-config.service';
 import { RequestPath } from '../common/request-path';
+import { API_PREFIX } from '../constants/route-paths.constants';
+
+type RouteClass = 'auth' | 'refresh' | 'api';
+
+const AUTH_PREFIX = `${API_PREFIX}/auth/`;
+const REFRESH_PATH = `${API_PREFIX}/auth/refresh`;
 
 interface Bucket {
   count: number;
@@ -25,9 +31,9 @@ export class RateLimitMiddleware implements NestMiddleware, OnModuleDestroy {
   }
 
   use(request: Request, response: Response, next: NextFunction): void {
-    const isAuthEndpoint = RequestPath.of(request).includes('/auth/');
-    const limit = isAuthEndpoint ? this.config.authRateLimit : this.config.defaultRateLimit;
-    const bucketKey = `${request.ip}:${isAuthEndpoint ? 'auth' : 'api'}`;
+    const routeClass = this.classify(RequestPath.of(request));
+    const limit = this.limitFor(routeClass);
+    const bucketKey = `${request.ip}:${routeClass}`;
     const now = Date.now();
 
     const bucket = this.buckets.get(bucketKey);
@@ -45,6 +51,27 @@ export class RateLimitMiddleware implements NestMiddleware, OnModuleDestroy {
 
     bucket.count += 1;
     next();
+  }
+
+  /**
+   * Login/register/password-reset get the strict limit (brute force). Refresh
+   * is separate and looser: a whole class behind one NAT refreshes every 15
+   * minutes, which must not lock everyone out of logging in.
+   */
+  private classify(path: string): RouteClass {
+    if (path === REFRESH_PATH) return 'refresh';
+    return path.startsWith(AUTH_PREFIX) ? 'auth' : 'api';
+  }
+
+  private limitFor(routeClass: RouteClass): number {
+    switch (routeClass) {
+      case 'auth':
+        return this.config.authRateLimit;
+      case 'refresh':
+        return this.config.refreshRateLimit;
+      default:
+        return this.config.defaultRateLimit;
+    }
   }
 
   onModuleDestroy(): void {

@@ -31,10 +31,10 @@ Browser / Mobile ──►  │  Caddy :80  ──►  api-gateway :3000  ──
 
 | Việc | Gateway | Service backend |
 |---|---|---|
-| Token có hợp lệ không? Người gọi là ai? | ✅ | — |
+| Token có hợp lệ không? Người gọi là ai? | ✅ (lọc sớm) | ✅ (verify lại, quyết định cuối) |
 | Service nào sở hữu `/api/v1/rooms`? | ✅ | — |
 | IP này gọi quá nhiều chưa? | ✅ | — |
-| Role này có được gọi endpoint này không? | — | ✅ (guard đọc `x-user-role`) |
+| Role / trạng thái khóa có được gọi endpoint này không? | — | ✅ (guard đọc claim `role`, `status` trong JWT) |
 | Phòng 123 có thuộc landlord này không? | — | ✅ (cần dữ liệu) |
 | Body request có hợp lệ không? | — | ✅ (validate DTO) |
 
@@ -90,8 +90,9 @@ flowchart LR
 4. JWT auth: không phải path public → verify token →
    `userClaims = { sub: 'u_9', role: 'landlord', ... }`.
 5. Proxy: chuyển tới `http://tenancy:3002/api/v1/rooms/42` kèm
-   `x-user-id: u_9`, `x-user-role: landlord`, `x-correlation-id: <uuid>`, rồi
-   stream response về cho client.
+   nguyên header `Authorization`, `x-user-id: u_9` (chỉ để log),
+   `x-correlation-id: <uuid>`, rồi stream response về cho client. Tenancy tự
+   verify lại token trước khi xử lý.
 
 ## Các khái niệm NestJS được dùng
 
@@ -175,4 +176,4 @@ dùng, mọi route đều trông như `/` và gateway trả 404 cho tất cả.
 |---|---|
 | `bodyParser: false` | Gateway không bao giờ đọc body. Giữ nguyên stream gốc giúp chuyển tiếp mọi kiểu nội dung (JSON, upload multipart, binary) nguyên từng byte. Xem [Proxy](04-proxying.md). |
 | `app.set('trust proxy', 1)` | Gateway đứng sau đúng một proxy (Caddy). Thiết lập này giúp `request.ip` là IP thật của client lấy từ `X-Forwarded-For`. Xem [Rate limiting](05-rate-limiting.md). |
-| `enableCors({ origin: true, credentials: true })` | Chấp nhận mọi `Origin`, để web app chạy được từ bất kỳ host nào khi demo bằng IP. Khi có domain thật thì nên giới hạn lại danh sách origin. |
+| `enableCors({ origin: CORS_ORIGINS, credentials: false })` | Chỉ origin trong `CORS_ORIGINS` (vd. web app) được gọi từ trình duyệt. Token đi trong header/body nên không cần cookie (`credentials: false`). Header CORS do service trả về bị gateway xoá, để không ghi đè lên giá trị của gateway. |

@@ -76,11 +76,16 @@ Gateway xoá chúng một cách tường minh (`HOP_BY_HOP_HEADERS`).
 
 Trong hook `proxyReq`, ngay trước khi request tới backend được gửi đi:
 
-1. Xoá `x-user-id` / `x-user-role` do client gửi (chống giả mạo; xem
+1. Xoá mọi header `x-user-*` và `x-service-token` do client gửi (xem
    [Xác thực](03-authentication.md)).
 2. Xoá các header hop-by-hop.
-3. Đặt `x-correlation-id`.
-4. Đặt `x-user-id` / `x-user-role` lấy từ token đã verify, nếu có.
+3. Đặt `x-correlation-id` (cũng được trả về cho client trong response).
+4. Đặt `x-user-id` lấy từ token đã verify, nếu có. Header này **chỉ để log**;
+   service xác thực bằng `Authorization` được chuyển tiếp nguyên vẹn.
+5. `xfwd: true`: thêm `X-Forwarded-For` để service biết IP thật của client.
+
+Trong hook `proxyRes`, gateway xoá các header `access-control-*` service trả về:
+CORS chỉ do gateway quyết định.
 
 ## Correlation ID
 

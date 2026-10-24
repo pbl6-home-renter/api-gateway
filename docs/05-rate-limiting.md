@@ -32,19 +32,20 @@ t=20s  req → count 3 ≥ 3                 ❌ 429, Retry-After: 40
 t=61s  req → hết cửa sổ → {1, reset@121} ✅
 ```
 
-### Hai nhóm giới hạn
+### Ba nhóm giới hạn
 
 ```ts
-const isAuthEndpoint = RequestPath.of(request).includes('/auth/');
-const bucketKey = `${request.ip}:${isAuthEndpoint ? 'auth' : 'api'}`;
+const routeClass = this.classify(RequestPath.of(request)); // 'auth' | 'refresh' | 'api'
+const bucketKey = `${request.ip}:${routeClass}`;
 ```
 
 | Nhóm | Biến env | Mặc định | Lý do |
 |---|---|---|---|
-| Path chứa `/auth/` | `AUTH_RATE_LIMIT_MAX` | 10 / cửa sổ | Login và đặt lại mật khẩu là mục tiêu brute force |
+| `/api/v1/auth/refresh` | `REFRESH_RATE_LIMIT_MAX` | 60 / cửa sổ | Client tự gọi mỗi 15 phút; cả lớp chung một NAT không được làm hết lượt login |
+| Path bắt đầu bằng `/api/v1/auth/` | `AUTH_RATE_LIMIT_MAX` | 10 / cửa sổ | Login và đặt lại mật khẩu là mục tiêu brute force |
 | Mọi path khác | `RATE_LIMIT_MAX` | 120 / cửa sổ | Dùng app bình thường |
 
-Hai bucket tách riêng nên lướt app không làm hết lượt login, và ngược lại.
+Các bucket tách riêng nên lướt app hay refresh token không làm hết lượt login, và ngược lại.
 
 ### Ưu nhược điểm của fixed window
 
@@ -111,8 +112,6 @@ this.sweepInterval.unref();
   bản gateway thì mỗi bản cho phép đủ giới hạn, và restart sẽ reset mọi bộ đếm.
   Muốn scale ra nhiều bản, chuyển bộ đếm sang Redis (`INCR` + `EXPIRE` cho mỗi
   key) hoặc dùng thư viện như `@nestjs/throttler` với Redis store.
-- **So khớp chuỗi con `/auth/`** khá thô: bất kỳ path nào sau này có chứa
-  `/auth/` cũng rơi vào nhóm giới hạn chặt.
 
 ## Response
 
