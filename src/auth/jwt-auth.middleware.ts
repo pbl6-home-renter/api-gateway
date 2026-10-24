@@ -1,6 +1,13 @@
 import { Injectable, Logger, type NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
-import { jwtVerify, createRemoteJWKSet, type JWTVerifyGetKey, type JWTPayload } from 'jose';
+import {
+  customFetch,
+  jwtVerify,
+  createRemoteJWKSet,
+  type FetchImplementation,
+  type JWTVerifyGetKey,
+  type JWTPayload,
+} from 'jose';
 import { GatewayConfigService } from '../config/gateway-config.service';
 import { RouteTableService } from '../routing/route-table.service';
 import { RequestPath } from '../common/request-path';
@@ -26,6 +33,34 @@ const INVALID_TOKEN_ERROR_CODES = new Set([
 const JWKS_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 const CLOCK_TOLERANCE_SECONDS = 5;
 
+/**
+ * Identity exposes all JSON responses through the standard API envelope:
+ * `{ statusCode, code, data }`. `jose` expects a raw JWKS document with a
+ * top-level `keys` array, so normalize the response only inside the gateway's
+ * JWKS fetcher and keep Identity's public contract unchanged.
+ */
+const fetchIdentityJwks: FetchImplementation = async (url, options) => {
+  const response = await fetch(url, options);
+  if (!response.ok) return response;
+
+  const body: unknown = await response.json();
+  const rawBody = body as { keys?: unknown; data?: { keys?: unknown } };
+  const jwks = Array.isArray(rawBody.keys)
+    ? rawBody
+    : rawBody.data && Array.isArray(rawBody.data.keys)
+      ? rawBody.data
+      : undefined;
+
+  if (!jwks) {
+    throw new Error('Identity JWKS response does not contain a keys array');
+  }
+
+  return new Response(JSON.stringify(jwks), {
+    status: response.status,
+    headers: { 'content-type': 'application/json' },
+  });
+};
+
 type VerifyOutcome =
   | { kind: 'valid'; claims: UserClaims }
   | { kind: 'invalid' }
@@ -48,7 +83,10 @@ export class JwtAuthMiddleware implements NestMiddleware {
     private readonly routeTable: RouteTableService,
   ) {
     this.jwks = config.jwksUrl
-      ? createRemoteJWKSet(new URL(config.jwksUrl), { cacheMaxAge: JWKS_CACHE_MAX_AGE_MS })
+      ? createRemoteJWKSet(new URL(config.jwksUrl), {
+          cacheMaxAge: JWKS_CACHE_MAX_AGE_MS,
+          [customFetch]: fetchIdentityJwks,
+        })
       : undefined;
   }
 

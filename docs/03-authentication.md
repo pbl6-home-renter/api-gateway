@@ -56,7 +56,7 @@ endpoint **JWKS** (JSON Web Key Set):
 
 ```
 GET http://identity:3001/api/v1/.well-known/jwks.json
-{ "keys": [ { "kty": "RSA", "kid": "rentify-identity-2026-01", "n": "...", "e": "AQAB", "alg": "RS256", "use": "sig" } ] }
+{ "statusCode": 200, "code": "SUCCESS", "data": { "keys": [ { "kty": "RSA", "kid": "rentify-identity-2026-01", "n": "...", "e": "AQAB", "alg": "RS256", "use": "sig" } ] } }
 ```
 
 Mỗi key có một **`kid`** (key id). Header của token ghi rõ `kid` đã dùng để ký,
@@ -70,7 +70,9 @@ rồi gỡ key cũ khi các token cũ đã hết hạn. Gateway không cần s�
 [`jose`](https://github.com/panva/jose):
 
 ```ts
-this.jwks = createRemoteJWKSet(new URL(config.jwksUrl));   // một lần, lúc khởi động
+this.jwks = createRemoteJWKSet(new URL(config.jwksUrl), {
+  [customFetch]: fetchIdentityJwks, // unwrap the Identity API envelope
+});
 
 await jwtVerify(token, this.jwks, {
   issuer: this.config.jwtIssuer,       // iss phải bằng JWT_ISSUER
