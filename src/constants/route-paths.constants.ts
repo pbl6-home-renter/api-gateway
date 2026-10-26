@@ -48,6 +48,7 @@ const ROUTE_PREFIXES: Readonly<Record<GatewayService, readonly string[]>> = {
     '/me/favorite-rooms',
     '/me/roommate-profile',
     '/me/contracts',
+    '/administrative-units',
   ],
   [GatewayService.Payment]: ['/payments', '/me/payments'],
   [GatewayService.Community]: [
@@ -103,6 +104,8 @@ export const PUBLIC_RULES: readonly PublicRule[] = [
   { method: 'GET', path: `${API_PREFIX}/buildings/*` },
   { method: 'GET', path: `${API_PREFIX}/rooms` },
   { method: 'GET', path: `${API_PREFIX}/rooms/*` },
+  { method: 'GET', path: `${API_PREFIX}/administrative-units/provinces` },
+  { method: 'GET', path: `${API_PREFIX}/administrative-units/provinces/*/wards` },
   // Payment provider callbacks, authenticated by signature in payment-service
   { method: 'POST', path: `${API_PREFIX}/payments/webhooks/*` },
   ...Object.values(SERVICE_PATHS).flatMap((servicePath) => [
