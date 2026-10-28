@@ -110,14 +110,14 @@ flowchart LR
     P[push lên main] --> B[build-and-push]
     B -->|"api-gateway:latest"| H[(Docker Hub)]
     B --> D[deploy]
-    D -->|SSH| E[EC2: infra/scripts/deploy.sh api-gateway]
+    D -->|SSH| E[EC2: DEPLOY_STACK=edge infra/scripts/deploy.sh api-gateway]
     E -->|pull + tạo lại| C[container api-gateway]
 ```
 
 1. **build-and-push**: buildx build `linux/amd64`, push
    `<DOCKERHUB_USERNAME>/api-gateway:latest`, dùng cache của GitHub Actions để build lại nhanh hơn.
 2. **deploy**: SSH vào EC2, `git pull` repo `infra`, chạy
-   `./scripts/deploy.sh api-gateway`. Khi có tham số, script chỉ pull và tạo
+   `DEPLOY_STACK=edge ./scripts/deploy.sh api-gateway`. Khi có tham số, script chỉ pull và tạo
    lại **đúng** container đó (`--no-deps`). Identity, RabbitMQ và web app vẫn chạy bình thường.
 
 Chạy tay: *Actions → Build, Push and Deploy API Gateway → Run workflow*; bỏ
@@ -146,7 +146,7 @@ Các lệnh hay dùng (chạy trong `~/infra`):
 ```bash
 docker compose -f docker-compose.prod.yml logs -f api-gateway    # xem log
 docker compose -f docker-compose.prod.yml ps api-gateway         # trạng thái health
-./scripts/deploy.sh api-gateway                                  # chỉ deploy lại gateway
+DEPLOY_STACK=edge ./scripts/deploy.sh api-gateway                # chỉ deploy lại gateway
 ```
 
 ### Những thay đổi cần deploy phối hợp
