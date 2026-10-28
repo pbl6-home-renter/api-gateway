@@ -78,4 +78,4 @@ jobs:
             echo "[+] Pulling latest infra scripts..."
             git pull --ff-only
             echo "[+] Pulling latest API Gateway image and reloading container..."
-            bash ./scripts/deploy.sh api-gateway
+            DEPLOY_STACK=edge bash ./scripts/deploy.sh api-gateway
