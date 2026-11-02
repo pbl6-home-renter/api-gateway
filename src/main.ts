@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 import { GatewayConfigService } from './config/gateway-config.service';
 import { CorrelationId, type CorrelatedRequest } from './common/correlation-id';
 import { CORRELATION_ID_HEADER } from './constants/headers.constants';
+import { registerCommunitySocketProxy } from './proxy/community-socket-proxy';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -27,6 +28,7 @@ async function bootstrap() {
   });
 
   const config = app.get(GatewayConfigService);
+  registerCommunitySocketProxy(app.getHttpServer(), config);
   // Tokens travel in the Authorization header and request body, never in
   // cookies, so credentials are not needed.
   app.enableCors({

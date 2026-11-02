@@ -212,6 +212,8 @@ Tất cả prefix nằm dưới `/api/v1`, nguồn là `ROUTE_PREFIXES` trong [`
 | Payment | `PAYMENT_SERVICE_URL` | `/payments`, `/me/payments`, `/payment` |
 | Community | `COMMUNITY_SERVICE_URL` | `/conversations`, `/messages`, `/issues`, `/notifications`, `/me/issues`, `/me/notification-preference`, `/community` |
 
+WebSocket chat dùng Socket.IO tại `/api/v1/community/socket.io` (chỉ transport `websocket`). Gateway chỉ proxy upgrade đến Community và kiểm tra `Origin` theo `CORS_ORIGINS`; Community tự xác thực JWT trong `auth.token`. Xem contract tại `api-docs/docs/community-socket-v1.md`.
+
 Prefix `/<service>` (`/identity`, `/tenancy`, …) chứa health và Swagger của từng service: `/api/v1/<service>/health` và `/api/v1/<service>/swagger` (JSON tại `/api/v1/<service>/swagger/json`, dùng cho Apidog).
 
 <details>
