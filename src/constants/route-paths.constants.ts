@@ -23,7 +23,7 @@ const ROUTE_PREFIXES: Readonly<Record<GatewayService, readonly string[]>> = {
   [GatewayService.Identity]: [
     '/auth',
     '/users',
-    '/me', // `/me`, `/me/password`, `/me/push-devices`; other `/me/*` are listed below
+    '/me', // `/me` and `/me/password`; more specific service-owned routes are listed below
     '/media',
     '/audit-logs',
     '/.well-known',
@@ -56,6 +56,7 @@ const ROUTE_PREFIXES: Readonly<Record<GatewayService, readonly string[]>> = {
     '/messages',
     '/issues',
     '/notifications',
+    '/me/push-devices',
     '/me/issues',
     '/me/notification-preference',
   ],
