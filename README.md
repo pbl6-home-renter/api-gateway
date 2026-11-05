@@ -210,7 +210,7 @@ Tất cả prefix nằm dưới `/api/v1`, nguồn là `ROUTE_PREFIXES` trong [`
 | Identity | `IDENTITY_SERVICE_URL` | `/auth`, `/users`, `/me`, `/media`, `/audit-logs`, `/.well-known`, `/identity` |
 | Tenancy | `TENANCY_SERVICE_URL` | `/buildings`, `/admin/buildings`, `/rooms`, `/rate-policies`, `/billing-settings`, `/contract-templates`, `/contracts`, `/contract-members`, `/meter-readings`, `/invoices`, `/roommate-profiles`, `/match-requests`, `/dashboard`, `/administrative-units`, `/me/buildings`, `/me/rooms`, `/me/room-hub`, `/me/favorite-rooms`, `/me/roommate-profile`, `/me/contracts`, `/tenancy` |
 | Payment | `PAYMENT_SERVICE_URL` | `/payments`, `/me/payments`, `/payment` |
-| Community | `COMMUNITY_SERVICE_URL` | `/conversations`, `/messages`, `/issues`, `/notifications`, `/me/issues`, `/me/notification-preference`, `/community` |
+| Community | `COMMUNITY_SERVICE_URL` | `/conversations`, `/messages`, `/notifications`, `/me/push-devices`, `/me/notification-preference`, `/community` |
 
 WebSocket chat dùng Socket.IO tại `/api/v1/community/socket.io` (chỉ transport `websocket`). Gateway chỉ proxy upgrade đến Community và kiểm tra `Origin` theo `CORS_ORIGINS`; Community tự xác thực JWT trong `auth.token`. Xem contract tại `api-docs/docs/community-socket-v1.md`.
 

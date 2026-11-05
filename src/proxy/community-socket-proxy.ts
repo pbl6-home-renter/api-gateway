@@ -1,11 +1,13 @@
 import type { IncomingMessage } from 'node:http';
 import type { Socket } from 'node:net';
+import { Logger } from '@nestjs/common';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { GatewayConfigService } from '../config/gateway-config.service';
 import { GatewayService } from '../constants/gateway-service.enum';
 import { SPOOFABLE_HEADER_PREFIXES } from '../constants/headers.constants';
 
 const SOCKET_PATH = '/api/v1/community/socket.io';
+const logger = new Logger('CommunitySocketProxy');
 
 /** Upgrade requests bypass Nest HTTP middleware; Community verifies the JWT. */
 export function registerCommunitySocketProxy(
@@ -24,26 +26,29 @@ export function registerCommunitySocketProxy(
   const target = config.getServiceUrl(GatewayService.Community);
   const proxy = target
     ? createProxyMiddleware({
-        target,
-        changeOrigin: true,
-        ws: true,
-        on: {
-          proxyReqWs: (proxyRequest) => {
-            for (const name of proxyRequest.getHeaderNames()) {
-              if (
-                SPOOFABLE_HEADER_PREFIXES.some((prefix) =>
-                  name.startsWith(prefix),
-                )
-              ) {
-                proxyRequest.removeHeader(name);
-              }
+      target,
+      changeOrigin: true,
+      ws: true,
+      on: {
+        proxyReqWs: (proxyRequest) => {
+          for (const name of proxyRequest.getHeaderNames()) {
+            if (
+              SPOOFABLE_HEADER_PREFIXES.some((prefix) =>
+                name.startsWith(prefix),
+              )
+            ) {
+              proxyRequest.removeHeader(name);
             }
-          },
-          error: (_error, _request, response) => {
-            if ('destroy' in response) response.destroy();
-          },
+          }
         },
-      })
+        error: (error, request, response) => {
+          logger.warn(
+            `WebSocket proxy to ${target} failed for ${request.url ?? ''}: ${error.message}`,
+          );
+          if ('destroy' in response) response.destroy();
+        },
+      },
+    })
     : null;
 
   server.on('upgrade', (request, socket, head) => {
@@ -54,7 +59,7 @@ export function registerCommunitySocketProxy(
       socket.destroy();
       return;
     }
-    if (path !== SOCKET_PATH) {
+    if (path !== SOCKET_PATH && path !== `${SOCKET_PATH}/`) {
       socket.destroy();
       return;
     }

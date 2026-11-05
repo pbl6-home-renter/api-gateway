@@ -54,10 +54,8 @@ const ROUTE_PREFIXES: Readonly<Record<GatewayService, readonly string[]>> = {
   [GatewayService.Community]: [
     '/conversations',
     '/messages',
-    '/issues',
     '/notifications',
     '/me/push-devices',
-    '/me/issues',
     '/me/notification-preference',
   ],
 };
