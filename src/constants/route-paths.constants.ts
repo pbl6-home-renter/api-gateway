@@ -97,6 +97,8 @@ export const PUBLIC_RULES: readonly PublicRule[] = [
   { method: 'POST', path: `${API_PREFIX}/auth/refresh` },
   { method: 'POST', path: `${API_PREFIX}/auth/password-reset-requests` },
   { method: 'POST', path: `${API_PREFIX}/auth/password-resets` },
+  { method: 'POST', path: `${API_PREFIX}/auth/email-verifications` },
+  { method: 'POST', path: `${API_PREFIX}/auth/email-verification-requests` },
   { method: 'GET', path: `${API_PREFIX}/.well-known/jwks.json` },
   // Guest browsing (shared_user_flow §1.5)
   { method: 'GET', path: `${API_PREFIX}/buildings` },
