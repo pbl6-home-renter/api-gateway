@@ -53,6 +53,8 @@ const ROUTE_PREFIXES: Readonly<Record<GatewayService, readonly string[]>> = {
   ],
   [GatewayService.Payment]: ['/payments', '/me/payments'],
   [GatewayService.Community]: [
+    '/issues',
+    '/me/issues',
     '/conversations',
     '/messages',
     '/notifications',
