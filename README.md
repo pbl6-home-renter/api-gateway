@@ -207,7 +207,7 @@ Tất cả prefix nằm dưới `/api/v1`, nguồn là `ROUTE_PREFIXES` trong [`
 
 | Service | Biến env URL | Prefix |
 |---|---|---|
-| Identity | `IDENTITY_SERVICE_URL` | `/auth`, `/users`, `/me`, `/media`, `/audit-logs`, `/.well-known`, `/identity` |
+| Identity | `IDENTITY_SERVICE_URL` | `/auth`, `/users`, `/me`, `/media`, `/audit-logs`, `/appeals`, `/reports`, `/.well-known`, `/identity` |
 | Tenancy | `TENANCY_SERVICE_URL` | `/buildings`, `/admin/buildings`, `/rooms`, `/rate-policies`, `/billing-settings`, `/contract-templates`, `/contracts`, `/contract-members`, `/meter-readings`, `/invoices`, `/roommate-profiles`, `/match-requests`, `/dashboard`, `/administrative-units`, `/me/buildings`, `/me/rooms`, `/me/room-hub`, `/me/favorite-rooms`, `/me/roommate-profile`, `/me/contracts`, `/tenancy` |
 | Payment | `PAYMENT_SERVICE_URL` | `/payments`, `/me/payments`, `/payment` |
 | Community | `COMMUNITY_SERVICE_URL` | `/conversations`, `/messages`, `/notifications`, `/me/push-devices`, `/me/notification-preference`, `/community` |

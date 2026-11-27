@@ -26,6 +26,8 @@ const ROUTE_PREFIXES: Readonly<Record<GatewayService, readonly string[]>> = {
     '/me', // `/me` and `/me/password`; more specific service-owned routes are listed below
     '/media',
     '/audit-logs',
+    '/appeals', // P13-11: admin appeal queue; the user side is `/me/appeals`
+    '/reports',
     '/.well-known',
   ],
   [GatewayService.Tenancy]: [
